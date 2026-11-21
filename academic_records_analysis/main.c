@@ -182,21 +182,62 @@ void add_student()
     count++;
     save_records();
 }
+void display_students(void)
+{
+    if (count == 0)
+    {
+        printf("No student records available.\n");
+        return;
+    }
 
+    printf("\n---------------------------------------------------------\n");
+    printf("%-10s %-25s %-25s %-10s\n",
+           "ID", "FULL NAME", "STUDY PROGRAMME");
+    printf("---------------------------------------------------------\n");
+
+    for (int i = 0; i < count; i++)
+        printf("%-10d %s %-18s %-25s\n",s[i].id,s[i].first_name,s[i].last_name,s[i].programme);
+    printf("---------------------------------------------------------\n");
+    printf("Total students: %d\n", count);
+}
+
+void add_course_records()
+{
+    students new_student;
+    course new_course;
+    int id;
+
+    if (get_number("Student ID: ", &id, 'i') != 1)
+        return;
+
+    if (id < 0)
+    {
+        printf("Student ID cannot be negative.\n");
+        return;
+    }
+
+    if (id_search(id) == -1)
+    {
+        printf("Student doesnt exist in our system\n");
+        return;
+    }
+    new_student.id = id;
+    
+}
 int main(void)
 {
 
     load_records();
     //initialize an array of funtion pointers
-    void (*fun_ptr[])(void) = {add_student}; //search_student, sort_students, display_students, avg_grade, top_student, remove_student, risk_index_calc, summary_report};
+    void (*fun_ptr[])(void) = {add_student, display_students}; //search_student, sort_students, display_students, avg_grade, top_student, remove_student, risk_index_calc, summary_report};
     int choice;
     do
     {
         printf("Menu:\n");
         printf("0. Add Student\n");
-        printf("1. Search for a Student\n");
-        printf("2. Sort Students\n");
-        printf("3. Display Student Records\n");
+        printf("1. Display Student Records\n");
+        printf("2. Search for a Student\n");
+        printf("3. Sort Students\n");
         printf("4. Calculate Average Grade\n");
         printf("5. Identify the top-performing student\n");
         printf("6. Remove student\n");
