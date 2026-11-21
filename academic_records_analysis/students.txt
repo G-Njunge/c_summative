@@ -1,0 +1,4 @@
+1
+45678|Grace |Njunge|BSE3|4|2
+SE101|Introduction to C|99.00|100.00
+ENT101|Entrepreneurship|99.00|100.00
