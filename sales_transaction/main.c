@@ -3,6 +3,9 @@
 #include "helpers.h"
 #include "transactions.h"
 #include "processing.h"
+#include "filtering.h"
+#include "search_sort.h"
+#include "report.h"
 
 // Shows the menu until the user exits
 int main(void)
@@ -20,6 +23,10 @@ int main(void)
         printf("3. Update Transaction\n");
         printf("4. Delete Transaction\n");
         printf("5. Process Sales Data\n");
+        printf("6. Filter Transactions\n");
+        printf("7. Search Transactions\n");
+        printf("8. Sort Transactions\n");
+        printf("9. Generate Sales Report\n");
         printf("0. Exit\n");
 
         // Stop if input ends
@@ -36,6 +43,14 @@ int main(void)
             delete_transaction(&list, &count, &capacity);
         else if (choice == 5)
             process_sales(list, count);
+        else if (choice == 6)
+            filter_menu(list, count);
+        else if (choice == 7)
+            search_transactions(list, count);
+        else if (choice == 8)
+            sort_menu(list, count);
+        else if (choice == 9)
+            sales_report(list, count);
         else
             printf("Invalid choice.\n");
     }

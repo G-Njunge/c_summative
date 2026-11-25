@@ -62,6 +62,24 @@ void add_transaction(Transaction **list, int *count, int *capacity)
     printf("Transaction %d added.\n", t.id);
 }
 
+// Prints the heading of the table
+void print_header(void)
+{
+    printf("\n%-10s  %-25s  %8s  %12s  %18s  %-10s\n",
+           "ID", "Product", "Quantity", "Unit price", "Total", "Date");
+}
+
+// Prints one transaction as a row of the table
+void print_transaction(const Transaction *t)
+{
+    printf("%-10d  %-25s  %8d  ", t->id, t->product_name, t->quantity);
+
+    // The last two digits are the cents, 02 keeps the zero in 2.05
+    printf("%9lld.%02lld  ", t->price / 100, t->price % 100);
+    printf("%15lld.%02lld  ", t->total_amount / 100, t->total_amount % 100);
+    printf("%02d/%02d/%d\n", t->date.day, t->date.month, t->date.year);
+}
+
 // Shows a table of all transactions
 void display_transactions(const Transaction *list, int count)
 {
@@ -71,18 +89,10 @@ void display_transactions(const Transaction *list, int count)
         return;
     }
 
-    printf("\n%-10s  %-25s  %8s  %12s  %18s  %-10s\n",
-           "ID", "Product", "Quantity", "Unit price", "Total", "Date");
+    print_header();
 
     for (int i = 0; i < count; i++)
-    {
-        printf("%-10d  %-25s  %8d  ", list[i].id, list[i].product_name, list[i].quantity);
-
-        // The last two digits are the cents, 02 keeps the zero in 2.05
-        printf("%9lld.%02lld  ", list[i].price / 100, list[i].price % 100);
-        printf("%15lld.%02lld  ", list[i].total_amount / 100, list[i].total_amount % 100);
-        printf("%02d/%02d/%d\n", list[i].date.day, list[i].date.month, list[i].date.year);
-    }
+        print_transaction(&list[i]);
 
     printf("\nTotal transactions: %d\n", count);
 }
