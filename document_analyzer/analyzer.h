@@ -7,6 +7,8 @@ typedef struct {
     // These point to text in argv, so they are not freed
     const char *file_name;
     const char *keyword;
+    // Made by init_thread_args with malloc, main frees it
+    char *report_name;
     int total_lines;
     int total_occurrences;
     // Number of matching lines, which is also the number of line numbers stored
@@ -17,7 +19,10 @@ typedef struct {
     int success;
 } ThreadArgs;
 
-void init_thread_args(ThreadArgs *args, int thread_number, const char *file_name, const char *keyword);
+int init_thread_args(ThreadArgs *args, int thread_number, const char *file_name, const char *keyword);
 int count_keyword(const char *line, const char *keyword);
+
+// Thread function, pthread_create needs exactly this shape
+void *process_file(void *arg);
 
 #endif
