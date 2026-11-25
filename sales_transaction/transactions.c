@@ -4,15 +4,15 @@
 #include "helpers.h"
 #include "transactions.h"
 
-// Adds a new transaction and makes the array bigger if it is full
-void add_transaction(Transaction **list, int *count, int *capacity)
+// Adds a new transaction and makes the array bigger if it is full, returns 1 if it was added
+int add_transaction(Transaction **list, int *count, int *capacity)
 {
     Transaction t;
 
     while (1)
     {
         if (get_number("Transaction ID: ", &t.id, 'i') != 1)
-            return;
+            return 0;
 
         if (t.id > 0)
             break;
@@ -23,20 +23,20 @@ void add_transaction(Transaction **list, int *count, int *capacity)
     if (find_by_id(*list, *count, t.id) != -1)
     {
         printf("This transaction ID already exists.\n");
-        return;
+        return 0;
     }
 
     if (!get_name("Product name: ", t.product_name, sizeof(t.product_name), 1))
-        return;
+        return 0;
 
     if (read_quantity("Quantity sold: ", &t.quantity) != 1)
-        return;
+        return 0;
 
     if (read_price("Unit price: ", &t.price) != 1)
-        return;
+        return 0;
 
     if (read_date("Transaction date", &t.date) != 1)
-        return;
+        return 0;
 
     t.total_amount = t.quantity * t.price;
 
@@ -50,7 +50,7 @@ void add_transaction(Transaction **list, int *count, int *capacity)
         if (temp == NULL)
         {
             printf("Memory allocation failed.\n");
-            return;
+            return 0;
         }
 
         *list = temp;
@@ -60,6 +60,8 @@ void add_transaction(Transaction **list, int *count, int *capacity)
     (*list)[*count] = t;
     (*count)++;
     printf("Transaction %d added.\n", t.id);
+
+    return 1;
 }
 
 // Prints the heading of the table
@@ -97,8 +99,8 @@ void display_transactions(const Transaction *list, int count)
     printf("\nTotal transactions: %d\n", count);
 }
 
-// Updates one field of a transaction, the ID never changes
-void update_transaction(Transaction *list, int count)
+// Updates one field of a transaction but never the ID, returns 1 if it changed
+int update_transaction(Transaction *list, int count)
 {
     int id, index, choice;
     Transaction t;
@@ -106,17 +108,17 @@ void update_transaction(Transaction *list, int count)
     if (count == 0)
     {
         printf("There are currently no transactions.\n");
-        return;
+        return 0;
     }
 
     if (get_number("Transaction ID: ", &id, 'i') != 1)
-        return;
+        return 0;
 
     index = find_by_id(list, count, id);
     if (index == -1)
     {
         printf("This transaction does not exist.\n");
-        return;
+        return 0;
     }
 
     // Work on a copy so the record only changes if everything is valid
@@ -129,42 +131,44 @@ void update_transaction(Transaction *list, int count)
                    "4. Transaction date\n"
                    "0. Cancel\n"
                    "Enter your choice: ", &choice, 'i') != 1)
-        return;
+        return 0;
 
     switch (choice)
     {
     case 0:
         printf("Update cancelled.\n");
-        return;
+        return 0;
     case 1:
         if (!get_name("New product name: ", t.product_name, sizeof(t.product_name), 1))
-            return;
+            return 0;
         break;
     case 2:
         if (read_quantity("New quantity sold: ", &t.quantity) != 1)
-            return;
+            return 0;
         break;
     case 3:
         if (read_price("New unit price: ", &t.price) != 1)
-            return;
+            return 0;
         break;
     case 4:
         if (read_date("New transaction date", &t.date) != 1)
-            return;
+            return 0;
         break;
     default:
         printf("Invalid choice.\n");
-        return;
+        return 0;
     }
 
     // Set the total every time so it always matches the quantity and price
     t.total_amount = t.quantity * t.price;
     list[index] = t;
     printf("Transaction %d updated.\n", t.id);
+
+    return 1;
 }
 
-// Deletes a transaction after the user confirms
-void delete_transaction(Transaction **list, int *count, int *capacity)
+// Deletes a transaction after the user confirms, returns 1 if it was deleted
+int delete_transaction(Transaction **list, int *count, int *capacity)
 {
     int id, index;
     char answer[50];
@@ -172,26 +176,26 @@ void delete_transaction(Transaction **list, int *count, int *capacity)
     if (*count == 0)
     {
         printf("There are currently no transactions.\n");
-        return;
+        return 0;
     }
 
     if (get_number("Transaction ID: ", &id, 'i') != 1)
-        return;
+        return 0;
 
     index = find_by_id(*list, *count, id);
     if (index == -1)
     {
         printf("This transaction does not exist.\n");
-        return;
+        return 0;
     }
 
     if (!get_string("Type 'yes' to delete or any other word to go back: ", answer, sizeof(answer)))
-        return;
+        return 0;
 
     if (strcasecmp(answer, "yes") != 0)
     {
         printf("Delete cancelled.\n");
-        return;
+        return 0;
     }
 
     // Move every record after the deleted one back by one place
@@ -214,4 +218,6 @@ void delete_transaction(Transaction **list, int *count, int *capacity)
             *capacity = new_capacity;
         }
     }
+
+    return 1;
 }
