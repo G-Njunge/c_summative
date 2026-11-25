@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include "search_sort.h"
 
+// Searches for students by ID, name or programme using linear search
 void search_student()
 {
     int search_type, id = 0, found = 0, match;
@@ -33,6 +34,7 @@ void search_student()
     }
     printf("\n%-8s %-25s %-25s %-5s %s\n", "ID", "Name", "Programme", "Year", "Courses");
 
+    // Check every student one by one
     for (int i = 0; i < count; i++)
     {
         if (search_type == 0)
@@ -63,7 +65,7 @@ void search_student()
         printf("\n%d matching student(s) found.\n", found);
 }
 
-/* Insertion sort into a separate array, so the order of the saved records never changes */
+// Sorts a copy of the students using insertion sort, so the saved order does not change
 void sort_students(void)
 {
     int sort_type, pos, result;
@@ -119,7 +121,7 @@ void sort_students(void)
         return;
     }
 
-    /* averages[i] always belongs to the student in sorted[i] */
+    // averages[i] is the average of the student in sorted[i]
     sorted = malloc(count * sizeof(students));
     averages = malloc(count * sizeof(float));
     if (sorted == NULL || averages == NULL)
@@ -132,23 +134,16 @@ void sort_students(void)
 
     for (int i = 0; i < count; i++)
     {
-        /* A student with no courses gets an impossible average that puts them last in either order */
-        float average = descending ? -1 : 1000;
+        float average = calculate_average(&s[i]);
 
-        if (s[i].number_of_courses > 0)
-        {
-            float total = 0;
+        // Students with no courses always come last, so use a very big average here
+        if (average < 0 && !descending)
+            average = 1000;
 
-            for (int j = 0; j < s[i].number_of_courses; j++)
-                total += s[i].courses[j].marks / s[i].courses[j].maxMarks * 100;
-
-            average = total / s[i].number_of_courses;
-        }
-
-        /* Start at the end of the sorted part and move left until the student's place is found */
+        // Move left through the sorted students until the right place is found
         for (pos = i; pos > 0; pos--)
         {
-            /* result > 0: left student is bigger, result < 0: left student is smaller, 0: equal */
+            // Positive means the left student is bigger and negative means smaller
             if (sort_type == 0)
                 result = (sorted[pos - 1].id > s[i].id) - (sorted[pos - 1].id < s[i].id);
             else if (sort_type == 1 && name_type == 0)
@@ -168,15 +163,15 @@ void sort_students(void)
             else
                 result = strcasecmp(sorted[pos - 1].programme, s[i].programme);
 
-            /* Descending order is the opposite comparison */
+            // Flip the result for descending order
             if (descending)
                 result = -result;
 
-            /* The left student already belongs before this one, so the place is found */
+            // Stop if the left student should stay before this one
             if (result <= 0)
                 break;
 
-            /* Shift the student on the left one place right to make room */
+            // Move the left student one place right to make room
             sorted[pos] = sorted[pos - 1];
             averages[pos] = averages[pos - 1];
         }
@@ -200,7 +195,7 @@ void sort_students(void)
             printf("%.2f%%\n", averages[i]);
     }
 
-    /* The copies share their courses with s, so only the two arrays are freed here */
+    // Do not free the courses here because they still belong to s
     free(sorted);
     free(averages);
 }

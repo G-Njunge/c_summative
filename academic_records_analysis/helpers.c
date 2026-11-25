@@ -3,65 +3,87 @@
 #include <string.h>
 #include <ctype.h>
 #include <errno.h>
+#include <limits.h>
+#include <math.h>
 #include <strings.h>
 #include "helpers.h"
 
+// Asks for a number until it is valid, type 'i' is for int and 'f' is for float
 int get_number(const char *prompt, void *value, char type)
 {
-    int result;
+    char line[64];
+    char *end;
     int ch;
-    int invalid;
+    long whole = 0;
+    float decimal = 0;
+
+    if (type != 'i' && type != 'f')
+        return 0;
 
     while (1)
     {
         printf("%s", prompt);
 
-        if (type == 'i')
-            result = scanf("%d", (int *)value);
-        else if (type == 'f')
-            result = scanf("%f", (float *)value);
-        else
-            return 0;
-
-        if (result == EOF)
+        if (fgets(line, sizeof(line), stdin) == NULL)
             return EOF;
 
-        if (result != 1)
+        // Clear the rest of the line if it was too long
+        if (strchr(line, '\n') == NULL && !feof(stdin))
         {
-            printf("Invalid input. Try again.\n");
-
             while ((ch = getchar()) != '\n' && ch != EOF)
                 ;
 
+            printf("Input too long. Try again.\n");
             continue;
         }
 
-        /* Read the rest of the line. Anything other than spaces or tabs makes it invalid */
-        invalid = 0;
+        errno = 0;
+        if (type == 'i')
+            whole = strtol(line, &end, 10);
+        else
+            decimal = strtof(line, &end);
 
-        while ((ch = getchar()) != '\n' && ch != EOF)
-        {
-            if (ch != ' ' && ch != '\t')
-                invalid = 1;
-        }
-
-        if (invalid)
+        // Nothing was read, so the line has no number
+        if (end == line)
         {
             printf("Invalid input. Try again.\n");
             continue;
         }
 
-        /* Reject negative numbers */
-        if ((type == 'i' && *(int *)value < 0) ||
-            (type == 'f' && *(float *)value < 0))
+        // Only spaces are allowed after the number
+        while (isspace((unsigned char)*end))
+            end++;
+
+        if (*end != '\0' || (type == 'f' && isnan(decimal)))
+        {
+            printf("Invalid input. Try again.\n");
+            continue;
+        }
+
+        // Reject negative numbers
+        if ((type == 'i' && whole < 0) || (type == 'f' && decimal < 0))
         {
             printf("Negative numbers are not allowed. Try again.\n");
             continue;
         }
 
+        // Reject numbers that do not fit
+        if (errno == ERANGE || (type == 'i' && whole > INT_MAX) || (type == 'f' && isinf(decimal)))
+        {
+            printf("Number is out of range. Try again.\n");
+            continue;
+        }
+
+        if (type == 'i')
+            *(int *)value = (int)whole;
+        else
+            *(float *)value = decimal;
+
         return 1;
     }
 }
+
+// Asks for text until it is not empty, not too long and has a letter
 void get_string(const char *prompt, char *value, size_t size)
 {
     int ch;
@@ -89,11 +111,11 @@ void get_string(const char *prompt, char *value, size_t size)
             continue;
         }
 
-        /* Remove the newline and any spaces or tabs at the end */
+        // Remove the newline and any spaces at the end
         while (len > 0 && isspace((unsigned char)value[len - 1]))
             value[--len] = '\0';
 
-        /* Remove any spaces or tabs at the start. The + 1 moves the '\0' as well */
+        // Remove any spaces at the start, the + 1 also moves the '\0'
         int start = 0;
         while (isspace((unsigned char)value[start]))
             start++;
@@ -126,7 +148,7 @@ void get_string(const char *prompt, char *value, size_t size)
     }
 }
 
-/* A valid name or course has at least two letters and only letters, spaces, - ' . (plus digits for a course) */
+// Checks that text has two or more letters and only allowed characters
 int valid_text(const char *value, int allow_digits)
 {
     int letters = 0;
@@ -148,7 +170,7 @@ int valid_text(const char *value, int allow_digits)
     return letters >= 2;
 }
 
-/* Same as get_string, but keeps asking until the text looks like a real name or course */
+// Asks for text until it looks like a real name or programme
 void get_name(const char *prompt, char *value, size_t size, int allow_digits)
 {
     while (1)
@@ -165,6 +187,7 @@ void get_name(const char *prompt, char *value, size_t size, int allow_digits)
     }
 }
 
+// Returns the position of the student with this ID, or -1 if not found
 int id_search(int id)
 {
     for (int i = 0; i < count; i++)
@@ -176,7 +199,7 @@ int id_search(int id)
     return -1;
 }
 
-/* Case-insensitive, the same way names are compared everywhere else */
+// Returns the position of the student with this name, or -1 if not found
 int name_search(const char *first_name, const char *last_name )
 {
     for (int i = 0; i < count; i++)
@@ -188,7 +211,7 @@ int name_search(const char *first_name, const char *last_name )
     return -1;
 }
 
-/* Writes all students and their courses to the file; returns 1 on success, 0 on failure */
+// Saves all students and their courses to the file, returns 1 if it worked and 0 if not
 int save_records(void)
 {
     FILE *fp;
@@ -229,13 +252,14 @@ int save_records(void)
     return (1);
 }
 
-/* Rebuilds the student list from the file at start-up; returns 1 on success or missing file, 0 on failure */
+// Loads the students from the file, returns 1 if it worked or there is no file, and 0 if it failed
 int load_records(void)
 {
     FILE *fp;
     char line[256];
     int lineNum = 0;
     int total, i, j;
+    int end = 0;
     students *st;
 
     fp = fopen("students.txt", "r");
@@ -251,23 +275,20 @@ int load_records(void)
     }
 
     lineNum++;
+    // Line 1 must have only the number of students, the 9 stops numbers that are too big
     if (fgets(line, sizeof(line), fp) == NULL ||
-        sscanf(line, "%d", &total) != 1 || total < 0)
+        sscanf(line, "%9d %n", &total, &end) != 1 || line[end] != '\0' || total < 0)
         return (load_failed(fp, lineNum));
 
-    if (total == 0)
+    if (total > 0)
     {
-        fclose(fp);
-        printf("Loaded 0 students from students.txt.\n");
-        return (1);
-    }
-
-    s = malloc(total * sizeof(students));
-    if (s == NULL)
-    {
-        printf("Error: not enough memory to load records.\n");
-        fclose(fp);
-        return (0);
+        s = malloc(total * sizeof(students));
+        if (s == NULL)
+        {
+            printf("Error: not enough memory to load records.\n");
+            fclose(fp);
+            return (0);
+        }
     }
     capacity = total;
     count = 0;
@@ -297,27 +318,50 @@ int load_records(void)
                 return (load_failed(fp, lineNum));
     }
 
+    // Anything left means line 1 is wrong, so stop or the extra records would be lost
+    while (fgets(line, sizeof(line), fp) != NULL)
+    {
+        lineNum++;
+        if (strspn(line, " \t\r\n") != strlen(line))
+        {
+            printf("Error: there are more records than the number on line 1.\n");
+            return (load_failed(fp, lineNum));
+        }
+    }
+
     fclose(fp);
     printf("Loaded %d students from students.txt.\n", count);
     return (1);
 }
 
-/* Reads and validates one student line; returns 1 if valid, 0 otherwise */
+// Reads and checks one student line, returns 1 if it is valid and 0 if not
 int read_student_line(FILE *fp, students *st, int *lineNum)
 {
     char line[256];
+    long long id;
+    int end = 0;
     int i;
 
     (*lineNum)++;
     if (fgets(line, sizeof(line), fp) == NULL)
         return (0);
 
-    if (sscanf(line, "%d|%49[^|]|%49[^|]|%49[^|]|%d|%d",
-               &st->id, st->first_name, st->last_name,
-               st->programme, &st->year, &st->number_of_courses) != 6)
+    // The sizes stop numbers that are too big, and end checks for extra text on the line
+    if (sscanf(line, "%10lld|%49[^|]|%49[^|]|%49[^|]|%4d|%4d %n",
+               &id, st->first_name, st->last_name,
+               st->programme, &st->year, &st->number_of_courses, &end) != 6 || line[end] != '\0')
         return (0);
 
-    if (st->id <= 0 || st->year < 1 || st->year > 6 ||
+    if (id > INT_MAX)
+        return (0);
+    st->id = (int)id;
+
+    // Names and programmes follow the same rules as when the user types them
+    if (!valid_text(st->first_name, 0) || !valid_text(st->last_name, 0) ||
+        !valid_text(st->programme, 1) || name_search(st->first_name, st->last_name) != -1)
+        return (0);
+
+    if (st->id <= 0 || st->year < 1 || st->year > 4 ||
         st->number_of_courses < 0 || st->number_of_courses > catalog_size)
         return (0);
 
@@ -328,30 +372,33 @@ int read_student_line(FILE *fp, students *st, int *lineNum)
     return (1);
 }
 
-/* Reads and validates one course line against the catalog; returns 1 if valid, 0 otherwise */
+// Reads and checks one course line, returns 1 if it is valid and 0 if not
 int read_course_line(FILE *fp, students *st, int index, int *lineNum)
 {
     char line[256];
     course *c = &st->courses[index];
     const CourseInfo *info;
+    int end = 0;
     int k;
 
     (*lineNum)++;
     if (fgets(line, sizeof(line), fp) == NULL)
         return (0);
 
-    if (sscanf(line, "%14[^|]|%49[^|]|%f|%f",
-               c->course_code, c->course_name, &c->marks, &c->maxMarks) != 4)
+    if (sscanf(line, "%14[^|]|%49[^|]|%f|%f %n",
+               c->course_code, c->course_name, &c->marks, &c->maxMarks, &end) != 4 || line[end] != '\0')
         return (0);
 
     info = find_catalog_course(c->course_code);
     if (info == NULL)
         return (0);
 
-    strcpy(c->course_name, info->name);
-    c->maxMarks = info->maxMarks;
+    // The course name and maximum marks must match the catalog
+    if (strcmp(c->course_name, info->name) != 0 || c->maxMarks != info->maxMarks)
+        return (0);
 
-    if (c->marks < 0 || c->marks > c->maxMarks)
+    // Written this way so that a mark of nan is also rejected
+    if (!(c->marks >= 0 && c->marks <= c->maxMarks))
         return (0);
 
     for (k = 0; k < index; k++)
@@ -361,7 +408,7 @@ int read_course_line(FILE *fp, students *st, int index, int *lineNum)
     return (1);
 }
 
-/* Reports the bad line, frees loaded data and closes the file; always returns 0 */
+// Shows which line is bad, frees the data and closes the file, always returns 0
 int load_failed(FILE *fp, int lineNum)
 {
     printf("Error: invalid record on line %d of students.txt.\n", lineNum);
@@ -370,7 +417,7 @@ int load_failed(FILE *fp, int lineNum)
     return (0);
 }
 
-/* Frees each student's courses first, then the student array */
+// Frees the courses of each student first, then the student list
 void free_records(void)
 {
     int i;
@@ -383,7 +430,7 @@ void free_records(void)
     capacity = 0;
 }
 
-/* Returns the catalog entry for a course code, or NULL if it doesn't exist */
+// Returns the course with this code, or NULL if it does not exist
 const CourseInfo *find_catalog_course(const char *code)
 {
     int i;
@@ -392,4 +439,19 @@ const CourseInfo *find_catalog_course(const char *code)
         if (strcmp(CATALOG[i].code, code) == 0)
             return (&CATALOG[i]);
     return (NULL);
+}
+
+// Returns the average percentage of a student, or -1 if they have no courses
+float calculate_average(const students *st)
+{
+    float total = 0;
+
+    // Avoid dividing by zero
+    if (st->number_of_courses == 0)
+        return -1;
+
+    for (int i = 0; i < st->number_of_courses; i++)
+        total += st->courses[i].marks / st->courses[i].maxMarks * 100;
+
+    return total / st->number_of_courses;
 }

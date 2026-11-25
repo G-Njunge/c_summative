@@ -1,7 +1,4 @@
-// Create a file where student records will be stored
-// load the file details to our program whenver it starts
-// present the menu to the user
-// student info in structs + course info as structs with a student struct
+// Shows the menu and runs the option the user picks
 
 #include <stdio.h>
 #include <strings.h>
@@ -9,6 +6,7 @@
 #include "academic_record_operations.h"
 #include "search_sort.h"
 
+// All the courses a student can register for
 const CourseInfo CATALOG[] = {
     {"SE101",  "Introduction to C",         100},
     {"SE102",  "Data Structures",           100},
@@ -19,59 +17,65 @@ const CourseInfo CATALOG[] = {
 };
 int catalog_size = (int)(sizeof(CATALOG) / sizeof(CATALOG[0]));
 
+// The student list, how many students it has and how many it can hold
 students *s;
 int count = 0;
 int capacity = 0;
 
+// Loads the records, then shows the menu until the user exits
 int main(void)
 {
-
-    /* Stop here if loading fails, otherwise exiting would save an empty list over the file */
+    // Stop if loading fails, so we do not save an empty list over the file
     if (!load_records())
     {
         printf("Fix students.txt and run the program again. No records were changed.\n");
         return 1;
     }
 
-    //initialize an array of funtion pointers
-    void (*fun_ptr[])(void) = {add_student, display_students, update_student_info, remove_student, detailed_student_info, search_student, sort_students, academic_report}; //display_students, avg_grade, top_student, remove_student, risk_index_calc, summary_report};
+    // Array of function pointers, one for each menu option
+    void (*fun_ptr[])(void) = {add_student, display_students, update_student_info, remove_student, detailed_student_info, search_student, sort_students, academic_report};
     int choice;
-    do
+    char answer[50];
+
+    while (1)
     {
         printf("\nMenu:\n");
         printf("0. Add Student\n");
         printf("1. Display all registered students\n");
         printf("2. Update Student Information\n");
-        // printf("4. Calculate Average Grade\n");
-        // printf("5. Identify the top-performing student\n");
         printf("3. Remove student\n");
         printf("4. View student details and performance\n");
         printf("5. Search for a Student\n");
         printf("6. Sort Students\n");
         printf("7. Generate academic report\n");
-
-        //printf("5. Display a student's academic performance");
-        // printf("8. Generate summary report\n");
-        printf("9. Exit\n");
+        printf("8. Exit\n");
         if (get_number("Enter your choice: ", &choice, 'i')!=1)
         {
             free_records();
             return 1;
         }
 
-        if (choice == 9)
+        if (choice == 8)
         {
-            printf("Exiting...\n");
-            break;
+            if (save_records())
+            {
+                printf("Exiting...\n");
+                break;
+            }
+
+            // Let the user stay and fix the file instead of losing the records
+            get_string("Records were not saved. Type 'yes' to exit anyway or any other word to go back: ", answer, sizeof(answer));
+            if (strcasecmp(answer, "yes") == 0)
+                break;
+
+            continue;
         }
-        if (choice >= 0 && choice < 9)
+        if (choice >= 0 && choice < 8)
             fun_ptr[choice]();
         else
             printf("Invalid choice.\n");
+    }
 
-    } while (choice != 9);
-
-    save_records();
     free_records();
     return 0;
 }

@@ -5,13 +5,14 @@
 #include "helpers.h"
 #include "academic_record_operations.h"
 
+// Registers a new student with their courses and marks
 void add_student()
 {
     students new_student;
     course new_course;
     int id;
 
-    /* The loader rejects IDs below 1, so never let one be saved */
+    // The file cannot be loaded with an ID below 1, so do not allow it
     while (1)
     {
         if (get_number("Student ID: ", &id, 'i') != 1)
@@ -30,21 +31,19 @@ void add_student()
     }
     new_student.id = id;
 
-    /* Names are unique, so a name search can never be ambiguous */
-    while (1)
+    get_name("Student First Name: ", new_student.first_name, sizeof(new_student.first_name), 0);
+    get_name("Student Last Name: ", new_student.last_name, sizeof(new_student.last_name), 0);
+
+    // Two students cannot have the same name
+    if (name_search(new_student.first_name, new_student.last_name) != -1)
     {
-        get_name("Student First Name: ", new_student.first_name, sizeof(new_student.first_name), 0);
-        get_name("Student Last Name: ", new_student.last_name, sizeof(new_student.last_name), 0);
-
-        if (name_search(new_student.first_name, new_student.last_name) == -1)
-            break;
-
         printf("A student with this name already exists in our system.\n");
+        return;
     }
 
     get_name("Programme of study: ", new_student.programme, sizeof(new_student.programme), 1);
 
-    /* Ask for the year again instead of throwing away the whole record */
+    // Keep asking until the year is valid
     while (1)
     {
         if (get_number("Year of study: ", &new_student.year, 'i') != 1)
@@ -140,7 +139,7 @@ void add_student()
         new_student.courses[o] = new_course;
     }
 
-    /* Only grow the array now that the record is valid and will be kept */
+    // Make the student list bigger if it is full
         if (count >= capacity)
         {
             students *temp;
@@ -163,6 +162,8 @@ void add_student()
     count++;
     save_records();
 }
+
+// Shows a table of all students
 void display_students(void)
 {
     if (count == 0)
@@ -177,15 +178,23 @@ void display_students(void)
     printf("---------------------------------------------------------\n");
 
     for (int i = 0; i < count; i++)
-        printf("%-10d %s %-18s %-25s\n",s[i].id,s[i].first_name,s[i].last_name,s[i].programme);
+    {
+        char full_name[101];
+
+        // Join the names first so the columns line up
+        snprintf(full_name, sizeof(full_name), "%s %s", s[i].first_name, s[i].last_name);
+        printf("%-10d %-25s %-25s\n", s[i].id, full_name, s[i].programme);
+    }
     printf("---------------------------------------------------------\n");
     printf("Total students: %d\n", count);
 }
 
+// Updates the name, year, marks or courses of a student
 void update_student_info()
 {
     course new_course;
     int id, user_choice;
+    int match;
 
     if (get_number("Student ID: ", &id, 'i') != 1)
         return;
@@ -215,7 +224,17 @@ void update_student_info()
         char f_name[50];
         printf("Current first name: %s\n", s[index].first_name);
         get_name("Student's new first Name: ", f_name, sizeof(f_name), 0);
+
+        // Two students cannot have the same name
+        match = name_search(f_name, s[index].last_name);
+        if (match != -1 && match != index)
+        {
+            printf("A student with this name already exists in our system.\n");
+            return;
+        }
+
         strcpy(s[index].first_name, f_name);
+        printf("First name updated.\n");
         break;
     }
     case 1:
@@ -223,7 +242,17 @@ void update_student_info()
         char l_name[50];
         printf("Current last name: %s\n", s[index].last_name);
         get_name("Student's new last Name: ", l_name, sizeof(l_name), 0);
+
+        // Two students cannot have the same name
+        match = name_search(s[index].first_name, l_name);
+        if (match != -1 && match != index)
+        {
+            printf("A student with this name already exists in our system.\n");
+            return;
+        }
+
         strcpy(s[index].last_name, l_name);
+        printf("Last name updated.\n");
         break;
     }
     case 2:
@@ -241,14 +270,17 @@ void update_student_info()
             printf("Input a year between 1 and 4\n");
         }
         s[index].year = year;
+        printf("Year of study updated.\n");
         break;
     }
     case 3:
     {
-        int marks;
+        float marks;
         char course_code[15];
         get_string("Course code: ", course_code, sizeof(course_code));
-        int match = -1;
+
+        // Find the course the user typed
+        match = -1;
         for (int i = 0; i < s[index].number_of_courses; i++)
         {
             if (strcasecmp(course_code, s[index].courses[i].course_code) == 0)
@@ -261,21 +293,22 @@ void update_student_info()
         if (match == -1)
         {
             printf("This student isnt taking the course you just entered\n");
-            break;
+            return;
         }
 
         while (1)
         {
-            if (get_number("New marks: ", &marks, 'i') != 1)
+            if (get_number("New marks: ", &marks, 'f') != 1)
                 return;
 
             if (marks >= 0 && marks <= s[index].courses[match].maxMarks)
                 break;
 
-            printf("Input a valid score\n");
+            printf("Input a valid course mark between 0 and %.0f\n", s[index].courses[match].maxMarks);
         }
 
         s[index].courses[match].marks = marks;
+        printf("Marks updated.\n");
         break;
     }
     case 4:
@@ -288,7 +321,7 @@ void update_student_info()
         if (s[index].number_of_courses == catalog_size)
         {
             printf("Student is already registered for every course.\n");
-            break;
+            return;
         }
 
         while (1)
@@ -302,6 +335,7 @@ void update_student_info()
             printf("Input a number between 1 and %d\n", catalog_size - s[index].number_of_courses);
         }
 
+        // Make room for the new courses
         temp = realloc(s[index].courses,
                        (s[index].number_of_courses + new_count) * sizeof(course));
         if (temp == NULL)
@@ -368,9 +402,19 @@ void update_student_info()
         printf("Courses registered.\n");
         break;
     }
+    case 5:
+        printf("Update cancelled.\n");
+        return;
+    default:
+        printf("Invalid choice.\n");
+        return;
     }
+
+    // Save now so the change is not lost if the program closes
+    save_records();
 }
 
+// Shows the details and performance of one student
 void detailed_student_info()
 {
     int id;
@@ -385,7 +429,6 @@ void detailed_student_info()
 
     int index = id_search(id);
     students *st = &s[index];
-    float total_percent = 0;
     int best = 0;
     int worst = 0;
     float best_percent, worst_percent;
@@ -414,8 +457,6 @@ void detailed_student_info()
         course *c = &st->courses[j];
         float percent = c->marks / c->maxMarks * 100;
 
-        total_percent += percent;
-
         if (percent > best_percent)
         {
             best_percent = percent;
@@ -432,7 +473,7 @@ void detailed_student_info()
                percent, percent >= 50 ? "PASS" : "FAIL");
     }
 
-    float average = total_percent / st->number_of_courses;
+    float average = calculate_average(st);
 
     printf("\nOverall average: %.2f%% (%s)\n", average, average >= 50 ? "PASS" : "FAIL");
     printf("Best course:     %s %s (%.2f%%)\n",
@@ -441,15 +482,16 @@ void detailed_student_info()
            st->courses[worst].course_code, st->courses[worst].course_name, worst_percent);
 }
 
+// Removes a student after the user confirms
 void remove_student()
 {
     int id,pos,index;
-    char choice[7];
+    char choice[50];
 
     if (get_number("ID of the student you would love to remove: ", &id, 'i') != 1)
         return;
 
-    /* Check the ID first, so the user is only asked to confirm a student that exists */
+    // Check that the student exists before asking to confirm
     index = id_search(id);
     if (index == -1)
     {
@@ -457,23 +499,25 @@ void remove_student()
         return;
     }
 
-    get_string("Are you sure you want to proceed?\nType in 'yes' to proceed and any other letter to go back to the main menu: ", choice, sizeof(choice));
+    get_string("Are you sure you want to proceed?\nType in 'yes' to proceed and any other word to go back to the main menu: ", choice, sizeof(choice));
 
     if (strcasecmp(choice, "yes") != 0)
         return;
 
-    /* Free the courses before the shift overwrites the only pointer to them */
+    // Free the courses before the record is overwritten
     free(s[index].courses);
 
-    /* Shift every record after the removed one back by one place */
+    // Move every record after the removed one back by one place
     for (pos = index; pos < count - 1; pos ++)
         s[pos] = s[pos+1];
 
     count --;
     printf("\nStudent removed succesfully!\n");
 
-    /* Shrink to exactly half. count <= capacity/2 means the records still fit.
-       The capacity > 1 check stops it reaching 0, because realloc(s, 0) would free the array */
+    // Save now so the change is not lost if the program closes
+    save_records();
+
+    // Make the list half the size if it is half empty, but never 0
     if (capacity > 1 && count <= capacity/2)
     {
         students *temp;
@@ -488,8 +532,7 @@ void remove_student()
     }
 }
 
-/* Prints a summary of all students. Students with no courses have no average, so they are
-   left out of the averages, the highest and lowest, and the passing and failing counts */
+// Shows a report of all students, those with no courses are left out of the averages
 void academic_report(void)
 {
     int total_courses = 0;
@@ -509,7 +552,6 @@ void academic_report(void)
 
     for (int i = 0; i < count; i++)
     {
-        float total_percent = 0;
         float average;
 
         total_courses += s[i].number_of_courses;
@@ -517,17 +559,14 @@ void academic_report(void)
         if (s[i].number_of_courses == 0)
             continue;
 
-        for (int j = 0; j < s[i].number_of_courses; j++)
-            total_percent += s[i].courses[j].marks / s[i].courses[j].maxMarks * 100;
-
-        average = total_percent / s[i].number_of_courses;
+        average = calculate_average(&s[i]);
         sum_of_averages += average;
         graded++;
 
         if (average >= 50)
             passing++;
 
-        /* -1 means this is the first student with an average */
+        // -1 means this is the first student with an average
         if (highest == -1 || average > highest_average)
         {
             highest = i;
@@ -561,6 +600,7 @@ void academic_report(void)
     printf("\n===== PERFORMANCE PER COURSE =====\n");
     printf("%-8s %-28s %8s %7s %7s %9s\n", "Code", "Course", "Students", "Passed", "Failed", "Average");
 
+    // Go through each course and add up the marks of its students
     for (int i = 0; i < catalog_size; i++)
     {
         int enrolled = 0;
@@ -580,7 +620,8 @@ void academic_report(void)
                     if (percent >= 50)
                         passed++;
 
-                    break;  /* a student takes each course only once */
+                    // A student takes each course only once
+                    break;
                 }
             }
         }
@@ -601,7 +642,7 @@ void academic_report(void)
         int counted = 0;
         int in_programme = 0;
 
-        /* Skip the programme if an earlier student already had it printed */
+        // Skip the programme if it was already printed
         for (int j = 0; j < i; j++)
         {
             if (strcasecmp(s[j].programme, s[i].programme) == 0)

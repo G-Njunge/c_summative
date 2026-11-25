@@ -50,5 +50,6 @@ int valid_text(const char *value, int allow_digits);
 void get_name(const char *prompt, char *value, size_t size, int allow_digits);
 int id_search(int id);
 int name_search(const char *first_name,const char *last_name);
+float calculate_average(const students *st);
 
 #endif
