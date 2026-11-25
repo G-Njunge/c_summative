@@ -1,4 +1,55 @@
-1
+16
 45678|Grace |Njunge|BSE3|4|2
 SE101|Introduction to C|99.00|100.00
 ENT101|Entrepreneurship|99.00|100.00
+1001|Amina|Uwase|Software Engineering|2|3
+SE101|Introduction to C|78.00|100.00
+SE102|Data Structures|64.50|100.00
+SE103|Discrete Mathematics|38.00|50.00
+1002|Brian|Otieno|Business|1|2
+BUS101|Principles of Management|45.00|100.00
+BUS102|Business Statistics|32.00|80.00
+1003|Chloe|Mukamana|Software Engineering|3|4
+SE101|Introduction to C|91.00|100.00
+SE102|Data Structures|85.00|100.00
+SE103|Discrete Mathematics|44.00|50.00
+ENT101|Entrepreneurship|72.00|100.00
+1004|David|Kamau|Entrepreneurship|2|2
+ENT101|Entrepreneurship|58.00|100.00
+BUS101|Principles of Management|61.00|100.00
+1005|Esther|Ingabire|Business|4|3
+BUS101|Principles of Management|88.00|100.00
+BUS102|Business Statistics|70.00|80.00
+ENT101|Entrepreneurship|79.00|100.00
+1006|Felix|Niyonzima|Software Engineering|1|2
+SE101|Introduction to C|22.00|100.00
+SE103|Discrete Mathematics|15.00|50.00
+1007|Gloria|Achieng|Entrepreneurship|3|0
+1008|Henry|Mugisha|Business|2|1
+BUS102|Business Statistics|40.00|80.00
+1009|Irene|Wanjiru|Software Engineering|4|3
+SE102|Data Structures|55.00|100.00
+SE103|Discrete Mathematics|27.00|50.00
+ENT101|Entrepreneurship|66.00|100.00
+1010|James|Habimana|Business|3|4
+BUS101|Principles of Management|52.00|100.00
+BUS102|Business Statistics|48.00|80.00
+ENT101|Entrepreneurship|60.00|100.00
+SE101|Introduction to C|35.00|100.00
+1011|Lydia|Mutesi|Entrepreneurship|1|2
+ENT101|Entrepreneurship|83.00|100.00
+BUS101|Principles of Management|76.00|100.00
+1012|Moses|Kiprono|Software Engineering|2|1
+SE101|Introduction to C|49.00|100.00
+1013|Nadia|Umutoni|Business|1|0
+1014|Oscar|Otieno|Entrepreneurship|4|3
+ENT101|Entrepreneurship|30.00|100.00
+BUS102|Business Statistics|20.00|80.00
+BUS101|Principles of Management|41.00|100.00
+1015|Patience|Mwangi|Software Engineering|3|6
+SE101|Introduction to C|95.00|100.00
+SE102|Data Structures|88.00|100.00
+SE103|Discrete Mathematics|47.00|50.00
+BUS101|Principles of Management|84.00|100.00
+BUS102|Business Statistics|72.00|80.00
+ENT101|Entrepreneurship|90.00|100.00

@@ -51,10 +51,17 @@ int get_number(const char *prompt, void *value, char type)
             continue;
         }
 
+        /* Reject negative numbers */
+        if ((type == 'i' && *(int *)value < 0) ||
+            (type == 'f' && *(float *)value < 0))
+        {
+            printf("Negative numbers are not allowed. Try again.\n");
+            continue;
+        }
+
         return 1;
     }
 }
-
 void get_string(const char *prompt, char *value, size_t size)
 {
     int ch;
