@@ -1,3 +1,8 @@
+This repository has two C projects:
+
+- [Student Academic Records and Performance Analytics System](#student-academic-records-and-performance-analytics-system), in `academic_records_analysis`
+- [Sales Transaction Management System](#sales-transaction-management-system), in `sales_transaction`
+
 # Student Academic Records and Performance Analytics System
 
 A menu-driven C program that stores student records in memory, saves them to `students.txt` and produces academic reports.
@@ -108,3 +113,105 @@ Numbers are read as text and then converted, so letters, negative numbers and nu
 | Invalid menu choices, IDs, names, years, courses and marks | Rejected with a message |
 | Duplicate ID or name, or a student that does not exist | Rejected with a message |
 | Student with no courses | No division by zero |
+
+# Sales Transaction Management System
+
+A menu-driven C program that records sales, processes them with function pointers and callbacks, and saves them to `transactions.txt`.
+
+## Building and running the sales program
+
+From the root of the repository:
+
+```
+cd sales_transaction
+gcc main.c helpers.c transactions.c processing.c filtering.c search_sort.c report.c files.c -o main.exe
+.\main.exe
+```
+
+Run it from inside `sales_transaction`, because the program looks for `transactions.txt` in the current folder.
+
+## Program structure
+
+| File | Purpose |
+|---|---|
+| `main.c` | Menu, and the array, count and capacity |
+| `helpers.c/.h` | Structures, input validation and finding an ID |
+| `transactions.c/.h` | Add, display, update and delete |
+| `processing.c/.h` | Five operations run through function pointers |
+| `filtering.c/.h` | Condition callbacks and the functions that use them |
+| `search_sort.c/.h` | Searching and sorting, with compare callbacks |
+| `report.c/.h` | Sales report |
+| `files.c/.h` | Saving and loading |
+| `transactions.txt` | Sample transactions |
+
+A `Transaction` holds an ID, product name, quantity, unit price, total amount and a `Date`. Money is stored as whole cents in a `long long`, so adding up totals has no rounding errors. Add and update set the total whenever the quantity or price can change. The ID never changes after a transaction is added.
+
+There are no global variables. `main` owns the data and passes it to each function.
+
+## Function pointers
+
+`process_sales` keeps the five operations in an array and uses the number the user picks to call one:
+
+```c
+void (*ops[5])(const Transaction *, int) = {total_revenue, average_value, highest_transaction,
+                                            lowest_transaction, total_units};
+ops[choice - 1](list, count);
+```
+
+All five have the same parameters and return type, which is what lets them share one array. The choice is checked first, so the program never reads outside the array.
+
+## Callback functions
+
+A callback is passed to another function, which then calls it. Each condition callback answers yes (1) or no (0) for one transaction:
+
+| Callbacks | Passed to | Used for |
+|---|---|---|
+| `above_amount`, `above_quantity`, `is_product` | `filter_transactions`, `count_transactions` | Filter menu |
+| `is_product`, `equals_amount` | `filter_transactions`, `count_transactions` | Search |
+| `is_product` | `count_transactions`, `sum_transactions` | Revenue of one product |
+| `compare_id`, `compare_product`, `compare_total` | `sort_transactions` | Sort |
+
+The value to compare with is passed as a `const void *`, so one shape works for amounts, quantities and names. Adding a condition needs only a new callback and a menu option. The functions that loop over the records do not change.
+
+## Pointers and dynamic memory
+
+- Functions that may move the array, such as `add_transaction`, take `Transaction **list`, so they can change the pointer in `main`. Functions that only change records take `Transaction *list`, and functions that only read take `const Transaction *list`.
+- Loading uses `malloc` to make an array, and `realloc` doubles it when it is full. Adding also doubles the array with `realloc`.
+- Deleting halves the array when only a quarter is used. It never goes below 4, so `realloc` is never asked for 0 bytes.
+- Every `malloc` and `realloc` is checked. `realloc` results go into a temporary pointer first, so the old array is not lost if it fails.
+- Sorting uses a copy made with `malloc`, which is freed afterwards. `main` frees the array on exit.
+
+## Searching and sorting transactions
+
+**Linear search.** An ID search stops at the first match because IDs are unique. Product and amount searches check every record, because several can match. Product names ignore capital letters.
+
+**Insertion sort.** `sort_transactions` moves each record left until the one before it should stay in front. The compare callback decides the order, and the result is flipped for descending order. It is O(n²) and `qsort()` is not used. The saved order does not change.
+
+## Saving and loading transactions
+
+Each line is `id|product|quantity|price in cents|day|month|year`:
+
+```
+1001|Cooking oil 1L|2|32500|2|1|2025
+```
+
+- The total is not saved. It is worked out when loading, so it always matches the quantity and price.
+- There is no record count in the file, so none can be wrong.
+- Saving writes to `transactions.tmp` first, and replaces `transactions.txt` only if every write worked.
+- Loading fills a separate array, and replaces the records in memory only if every line is valid.
+- The program saves after every add, update and delete, and from the menu. If the last save failed, it tries again on exit.
+- A missing file starts an empty list. An invalid file stops the program with the line number, and the file is left unchanged.
+
+## Validation and testing of the sales program
+
+| Test | Result |
+|---|---|
+| Duplicate, zero, negative or too large ID | Rejected |
+| Invalid quantity, price, product name, date or menu choice | Rejected |
+| Transaction that does not exist, or no transactions at all | Shown as a message, with no division by zero |
+| All five operations, filters and searches | Correct results |
+| 3,600 random sorts | All in the right order, with no lost records |
+| Add, update and delete, then restart | Records are loaded with the changes |
+| Missing, invalid and read-only file, and a full disk | Handled with a message and no saved records lost |
+| `malloc` and `realloc` failing | Handled with a message and no records lost |
+| Input ending in any menu option | The program stops cleanly |
