@@ -4,8 +4,10 @@
 // student info in structs + course info as structs with a student struct
 
 #include <stdio.h>
+#include <strings.h>
 #include "helpers.h"
 #include "academic_record_operations.h"
+#include "search_sort.h"
 
 const CourseInfo CATALOG[] = {
     {"SE101",  "Introduction to C",         100},
@@ -32,7 +34,7 @@ int main(void)
     }
 
     //initialize an array of funtion pointers
-    void (*fun_ptr[])(void) = {add_student, display_students, update_student_info, remove_student, detailed_student_info}; //search_student, sort_students, display_students, avg_grade, top_student, remove_student, risk_index_calc, summary_report};
+    void (*fun_ptr[])(void) = {add_student, display_students, update_student_info, remove_student, detailed_student_info, search_student, sort_students, academic_report}; //display_students, avg_grade, top_student, remove_student, risk_index_calc, summary_report};
     int choice;
     do
     {
@@ -40,12 +42,14 @@ int main(void)
         printf("0. Add Student\n");
         printf("1. Display all registered students\n");
         printf("2. Update Student Information\n");
-        // printf("2. Search for a Student\n");
-        // printf("3. Sort Students\n");
         // printf("4. Calculate Average Grade\n");
         // printf("5. Identify the top-performing student\n");
         printf("3. Remove student\n");
         printf("4. View student details and performance\n");
+        printf("5. Search for a Student\n");
+        printf("6. Sort Students\n");
+        printf("7. Generate academic report\n");
+
         //printf("5. Display a student's academic performance");
         // printf("8. Generate summary report\n");
         printf("9. Exit\n");

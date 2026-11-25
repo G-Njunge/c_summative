@@ -89,8 +89,15 @@ void get_string(const char *prompt, char *value, size_t size)
             continue;
         }
 
-        if (len > 0 && value[len - 1] == '\n')
-            value[len - 1] = '\0';
+        /* Remove the newline and any spaces or tabs at the end */
+        while (len > 0 && isspace((unsigned char)value[len - 1]))
+            value[--len] = '\0';
+
+        /* Remove any spaces or tabs at the start. The + 1 moves the '\0' as well */
+        int start = 0;
+        while (isspace((unsigned char)value[start]))
+            start++;
+        memmove(value, value + start, len - start + 1);
 
         if (value[0] == '\0')
         {

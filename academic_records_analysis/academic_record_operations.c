@@ -487,3 +487,139 @@ void remove_student()
         capacity /= 2;
     }
 }
+
+/* Prints a summary of all students. Students with no courses have no average, so they are
+   left out of the averages, the highest and lowest, and the passing and failing counts */
+void academic_report(void)
+{
+    int total_courses = 0;
+    int graded = 0;
+    int passing = 0;
+    int highest = -1;
+    int lowest = -1;
+    float sum_of_averages = 0;
+    float highest_average = 0;
+    float lowest_average = 0;
+
+    if (count == 0)
+    {
+        printf("No student records available.\n");
+        return;
+    }
+
+    for (int i = 0; i < count; i++)
+    {
+        float total_percent = 0;
+        float average;
+
+        total_courses += s[i].number_of_courses;
+
+        if (s[i].number_of_courses == 0)
+            continue;
+
+        for (int j = 0; j < s[i].number_of_courses; j++)
+            total_percent += s[i].courses[j].marks / s[i].courses[j].maxMarks * 100;
+
+        average = total_percent / s[i].number_of_courses;
+        sum_of_averages += average;
+        graded++;
+
+        if (average >= 50)
+            passing++;
+
+        /* -1 means this is the first student with an average */
+        if (highest == -1 || average > highest_average)
+        {
+            highest = i;
+            highest_average = average;
+        }
+        if (lowest == -1 || average < lowest_average)
+        {
+            lowest = i;
+            lowest_average = average;
+        }
+    }
+
+    printf("\n===== ACADEMIC REPORT =====\n");
+    printf("Total registered students:  %d\n", count);
+    printf("Total courses registered:   %d\n", total_courses);
+
+    if (graded == 0)
+        printf("No student has a course yet; performance not available.\n");
+    else
+    {
+        printf("Overall average:            %.2f%%\n", sum_of_averages / graded);
+        printf("Highest average:            %s %s, ID %d (%.2f%%)\n",
+               s[highest].first_name, s[highest].last_name, s[highest].id, highest_average);
+        printf("Lowest average:             %s %s, ID %d (%.2f%%)\n",
+               s[lowest].first_name, s[lowest].last_name, s[lowest].id, lowest_average);
+        printf("Students passing:           %d\n", passing);
+        printf("Students failing:           %d\n", graded - passing);
+        printf("Students with no courses:   %d\n", count - graded);
+    }
+
+    printf("\n===== PERFORMANCE PER COURSE =====\n");
+    printf("%-8s %-28s %8s %7s %7s %9s\n", "Code", "Course", "Students", "Passed", "Failed", "Average");
+
+    for (int i = 0; i < catalog_size; i++)
+    {
+        int enrolled = 0;
+        int passed = 0;
+        float course_total = 0;
+
+        for (int j = 0; j < count; j++)
+        {
+            for (int k = 0; k < s[j].number_of_courses; k++)
+            {
+                if (strcmp(s[j].courses[k].course_code, CATALOG[i].code) == 0)
+                {
+                    float percent = s[j].courses[k].marks / s[j].courses[k].maxMarks * 100;
+
+                    course_total += percent;
+                    enrolled++;
+                    if (percent >= 50)
+                        passed++;
+
+                    break;  /* a student takes each course only once */
+                }
+            }
+        }
+
+        printf("%-8s %-28s %8d %7d %7d ", CATALOG[i].code, CATALOG[i].name,
+               enrolled, passed, enrolled - passed);
+
+        if (enrolled == 0)
+            printf("%9s\n", "N/A");
+        else
+            printf("%8.2f%%\n", course_total / enrolled);
+    }
+
+    printf("\n===== STUDENTS PER PROGRAMME =====\n");
+
+    for (int i = 0; i < count; i++)
+    {
+        int counted = 0;
+        int in_programme = 0;
+
+        /* Skip the programme if an earlier student already had it printed */
+        for (int j = 0; j < i; j++)
+        {
+            if (strcasecmp(s[j].programme, s[i].programme) == 0)
+            {
+                counted = 1;
+                break;
+            }
+        }
+
+        if (counted)
+            continue;
+
+        for (int j = i; j < count; j++)
+        {
+            if (strcasecmp(s[j].programme, s[i].programme) == 0)
+                in_programme++;
+        }
+
+        printf("%-28s %d\n", s[i].programme, in_programme);
+    }
+}

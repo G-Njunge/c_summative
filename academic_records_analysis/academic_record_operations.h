@@ -7,5 +7,6 @@ void display_students(void);
 void update_student_info(void);
 void detailed_student_info(void);
 void remove_student(void);
+void academic_report(void);
 
 #endif
