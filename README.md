@@ -1,7 +1,8 @@
-This repository has two C projects:
+This repository has three C projects:
 
 - [Student Academic Records and Performance Analytics System](#student-academic-records-and-performance-analytics-system), in `academic_records_analysis`
 - [Sales Transaction Management System](#sales-transaction-management-system), in `sales_transaction`
+- [Multi-threaded Document Analyzer](#multi-threaded-document-analyzer), in `document_analyzer`
 
 # Student Academic Records and Performance Analytics System
 
@@ -124,7 +125,7 @@ From the root of the repository:
 
 ```
 cd sales_transaction
-gcc main.c helpers.c transactions.c processing.c filtering.c search_sort.c report.c files.c -o main.exe
+gcc main.c transactions.c processing.c -o main.exe
 .\main.exe
 ```
 
@@ -135,13 +136,8 @@ Run it from inside `sales_transaction`, because the program looks for `transacti
 | File | Purpose |
 |---|---|
 | `main.c` | Menu, and the array, count and capacity |
-| `helpers.c/.h` | Structures, input validation and finding an ID |
-| `transactions.c/.h` | Add, display, update and delete |
-| `processing.c/.h` | Five operations run through function pointers |
-| `filtering.c/.h` | Condition callbacks and the functions that use them |
-| `search_sort.c/.h` | Searching and sorting, with compare callbacks |
-| `report.c/.h` | Sales report |
-| `files.c/.h` | Saving and loading |
+| `transactions.c/.h` | Structures, input validation, add, display, update, delete, save and load |
+| `processing.c/.h` | Function pointer operations, condition callbacks, filters, search, sort and sales report |
 | `transactions.txt` | Sample transactions |
 
 A `Transaction` holds an ID, product name, quantity, unit price, total amount and a `Date`. Money is stored as whole cents in a `long long`, so adding up totals has no rounding errors. Add and update set the total whenever the quantity or price can change. The ID never changes after a transaction is added.
@@ -215,3 +211,89 @@ Each line is `id|product|quantity|price in cents|day|month|year`:
 | Missing, invalid and read-only file, and a full disk | Handled with a message and no saved records lost |
 | `malloc` and `realloc` failing | Handled with a message and no records lost |
 | Input ending in any menu option | The program stops cleanly |
+
+# Multi-threaded Document Analyzer
+
+A C program that searches several text files for a keyword at the same time, using one POSIX thread for each file, and writes a report for each one.
+
+## Building and running the analyzer
+
+From the root of the repository:
+
+```
+cd document_analyzer
+gcc main.c analyzer.c report.c -o document_analyzer -pthread
+./document_analyzer "IoT" document1.txt document2.txt document3.txt
+```
+
+| File | Purpose |
+|---|---|
+| `main.c` | Checks the arguments, creates and joins the threads, and frees the memory |
+| `analyzer.c/.h` | Thread structure, setting it up, the keyword search and the thread function |
+| `report.c/.h` | Report files and the summary |
+| `document1.txt` to `document3.txt` | Sample documents, the third one does not contain `IoT` |
+
+## Threads
+
+- `main` makes an array with one `ThreadArgs` structure per file. Each structure holds the file name, the keyword, the results and the thread ID.
+- `pthread_create` gives each thread the address of its own structure, `&args[i]`. The thread function `void *process_file(void *arg)` turns it back into a `ThreadArgs *`.
+- All the threads are created in one loop and joined in a second loop. Joining in the first loop would run them one after another.
+- `created` is set only if `pthread_create` returned 0, so a thread that never started is never joined. If one fails, the others carry on.
+- A thread never calls `exit`, because that would stop the other threads. It records the failure and returns.
+- `success` starts at 0 and is set to 1 last, after the file is read and the report is written.
+
+**Why no lock is needed.** Each thread writes only to its own structure and its own report. The keyword is shared, but no thread changes it. `main` reads the results only after joining. Status lines from different threads can appear in any order, and each one is a single `printf`.
+
+## Searching
+
+- `count_keyword` compares the keyword with the text at every position using `strncasecmp`, so capitals are ignored.
+- The keyword can be part of a word. Matches do not overlap, so `aa` is found twice in `aaaa`.
+- Lines can be any length. Each thread reads into its own buffer, which doubles with `realloc` when it is full.
+- Text after the last newline counts as a line.
+
+## Memory
+
+| Memory | Made by | Freed by |
+|---|---|---|
+| Array of structures | `main` | `main` |
+| Report name | `init_thread_args` | `main` |
+| Matching line numbers | `process_file` | `main`, after joining |
+| Line buffer | `process_file` | `process_file` |
+
+Every allocation is checked, and `realloc` results go into a temporary pointer first.
+
+## Reports
+
+The report of `document1.txt` is `document1_report.txt`, in the same folder:
+
+```
+===== DOCUMENT ANALYSIS REPORT =====
+Input File: document1.txt
+Search Keyword: IoT
+Total Lines Processed: 7
+Total Keyword Occurrences: 5
+Number of Matching Lines: 4
+Matching Line Numbers: 1, 3, 5, 7
+Processing Status: Successful
+```
+
+A file that cannot be read gets a report that says why it failed. Running the program again replaces the old reports.
+
+## Errors and testing of the analyzer
+
+The program returns 0 if every file succeeded and 1 if not.
+
+| Test | Result |
+|---|---|
+| Too few arguments, or an empty keyword | Message, and no threads are started |
+| Missing file, or a file that is not plain text | That file fails and the others complete |
+| Keyword not found | Successful, with 0 occurrences |
+| Empty file, no newline at the end, Windows line endings | Correct counts |
+| A 5 MB line | Correct counts |
+| Report cannot be created or written | That file fails, and no half-written report is left |
+| Two files with the same report name, or a report that would replace an input file | Refused before any thread starts |
+| `pthread_create` failing for some or all threads | Only the created threads are joined |
+| `malloc` and `realloc` failing | Handled with a message and no leaks |
+| 60 files at once, 10 times | Correct reports every time |
+
+The check for clashing names compares the names as they are typed, so `a.txt` and `./a.txt` are not seen as the same file.

@@ -1,0 +1,14 @@
+# Compiled programs and object files
+*.exe
+*.o
+*.out
+document_analyzer/document_analyzer
+
+# Temporary file made while saving
+*.tmp
+
+# Reports made by the document analyzer
+document_analyzer/*_report.txt
+
+# Editor settings
+.vscode/
