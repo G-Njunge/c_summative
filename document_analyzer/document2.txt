@@ -1,0 +1,5 @@
+Hospitals are starting to use connected devices.
+A wearable IoT monitor can check a patient's heart rate all day.
+The data is sent to a server where a doctor can read it.
+If the network stops, the monitor keeps the data until it can send it again.
+Good IOT systems are built to handle failures like this.

@@ -59,3 +59,28 @@ int generate_report(const ThreadArgs *args, const char *error)
 
     return 1;
 }
+
+// Shows the result of every file, returns how many failed
+int display_results(const ThreadArgs *args, int count)
+{
+    int failed = 0;
+
+    printf("\n===== PROCESSING SUMMARY =====\n");
+
+    for (int i = 0; i < count; i++)
+    {
+        printf("%s: %s\n", args[i].file_name, args[i].success ? "Completed" : "Failed");
+
+        if (!args[i].success)
+            failed++;
+    }
+
+    printf("\nAll processing tasks completed.\n");
+
+    if (failed == 0)
+        printf("Reports generated successfully.\n");
+    else
+        printf("%d of %d file(s) failed, see the errors above.\n", failed, count);
+
+    return failed;
+}

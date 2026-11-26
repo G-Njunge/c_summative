@@ -1,0 +1,4 @@
+A thread is a path of execution inside a program.
+Threads in the same program share memory.
+Each thread has its own stack for local variables.
+A program should join its threads before it ends.

@@ -1,8 +1,13 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
 
+#include <pthread.h>
+
 // Each thread gets its own struct, so no two threads write to the same memory
 typedef struct {
+    pthread_t thread;
+    // Set to 1 by main if pthread_create worked, only then can it be joined
+    int created;
     int thread_number;
     // These point to text in argv, so they are not freed
     const char *file_name;

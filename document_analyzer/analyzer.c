@@ -10,6 +10,7 @@ int init_thread_args(ThreadArgs *args, int thread_number, const char *file_name,
 {
     size_t length = strlen(file_name);
 
+    args->created = 0;
     args->thread_number = thread_number;
     args->file_name = file_name;
     args->keyword = keyword;

@@ -1,0 +1,7 @@
+The Internet of Things, or IoT, connects everyday objects to the internet.
+A sensor in a field can measure the soil and send the result to a phone.
+Farmers use IoT sensors to decide when to water their crops.
+
+Homes use it too. A smart lamp is a small iot device.
+Every device needs power, a sensor and a way to send data.
+IoT security matters, because an IoT device with a weak password is easy to attack.
