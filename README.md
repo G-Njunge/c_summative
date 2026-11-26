@@ -1,8 +1,9 @@
-This repository has three C projects:
+This repository has three C projects and one shell script:
 
 - [Student Academic Records and Performance Analytics System](#student-academic-records-and-performance-analytics-system), in `academic_records_analysis`
 - [Sales Transaction Management System](#sales-transaction-management-system), in `sales_transaction`
 - [Multi-threaded Document Analyzer](#multi-threaded-document-analyzer), in `document_analyzer`
+- [Linux System Health and Resource Monitoring Manager](#linux-system-health-and-resource-monitoring-manager), in `system_health`
 
 # Student Academic Records and Performance Analytics System
 
@@ -297,3 +298,154 @@ The program returns 0 if every file succeeded and 1 if not.
 | 60 files at once, 10 times | Correct reports every time |
 
 The check for clashing names compares the names as they are typed, so `a.txt` and `./a.txt` are not seen as the same file.
+
+# Linux System Health and Resource Monitoring Manager
+
+An interactive Bash script that shows CPU, memory, disk and process information, warns when usage passes a threshold, terminates processes safely, saves health reports and keeps an activity log.
+
+## Running the script
+
+It needs Linux and Bash 4 or newer. From the root of the repository:
+
+```
+cd system_health
+chmod +x system_health.sh
+./system_health.sh
+```
+
+On Windows, run it inside WSL. In Git Bash it stops with `Error: this script must be run on Linux.`, because Git Bash does not have `free`, `uptime` or the Linux `/proc` files.
+
+`.gitattributes` keeps `.sh` files in Linux line endings. Windows line endings would make Bash fail with `$'\r': command not found`.
+
+## Menu
+
+| Option | Function | What it does |
+|---|---|---|
+| 1. Display system information | `display_system_info` | Date and time, hostname, operating system, kernel, architecture and uptime |
+| 2. Monitor CPU utilization | `monitor_cpu` | Number of cores, load average, CPU usage, the 5 busiest processes and warnings |
+| 3. Monitor memory utilization | `monitor_memory` | Total, used and available memory, usage as a percentage and a warning |
+| 4. Monitor disk utilization | `monitor_disk` | Size, used and available space of each filesystem, and the ones above the threshold |
+| 5. View and search running processes | `view_processes` | Number of processes, the 15 busiest, and a search by name or PID |
+| 6. Terminate a process | `terminate_process` | Checks the process can be stopped, asks for confirmation, then stops it |
+| 7. Generate a system health report | `generate_report` | Saves options 1 to 4 in a file with a timestamp |
+| 8. View activity history | `view_log` | Shows the activity log |
+| 9. Clear activity log | `clear_log` | Empties the log after confirmation |
+| 10. Exit | `main` | Logs the end of the session and exits |
+
+`main` checks that it is running on Linux, then shows the menu in a loop until the user picks 10 or the input ends.
+
+## Helper functions
+
+Each helper is used in at least three places.
+
+| Helper | Purpose |
+|---|---|
+| `log_action` | Adds a line with the date, time and level to the activity log |
+| `ask` | Reads one line, and returns 1 when the input ends so the script can stop cleanly |
+| `confirm` | Returns success only if the user types `yes`, used before terminating, clearing the log and creating a folder |
+| `require_command` | Checks that a command exists and prints a clear error if it does not |
+| `read_threshold` | Asks for a threshold until it is a whole number from 1 to 100 |
+| `is_above` | Compares two numbers with `awk`, because Bash cannot compare decimals |
+
+The report runs the same functions as options 1 to 4, with the output sent to the report file, so no monitoring code is repeated. When a monitoring function is given a threshold, it does not ask for one.
+
+## Commands used
+
+| Information | Command or file |
+|---|---|
+| Hostname, kernel, architecture | `uname -n`, `uname -r`, `uname -m` |
+| Operating system | `PRETTY_NAME` in `/etc/os-release` |
+| Uptime | `uptime -p`, `uptime -s` |
+| CPU usage | `/proc/stat`, read twice one second apart |
+| Load average and cores | `/proc/loadavg`, `/proc/cpuinfo` |
+| Memory | `free -b` |
+| Disk | `df -h --output=...` |
+| Processes | `ps -eo pid,user,%cpu,%mem,stat,etime,comm --sort=-%cpu` |
+| Terminating | `kill -TERM`, and `kill -0` to check if it stopped |
+| Calculations | `awk` |
+
+- **CPU usage.** Usage is the share of time the CPU was not idle between the two readings.
+- **Process CPU.** `ps` shows each process's average CPU since it started, so a process can show more than 100% when it uses more than one core.
+- **Memory.** Used memory is total minus available, so caches that Linux can free do not count as used.
+- **Disk.** It leaves out `tmpfs`, `devtmpfs`, `squashfs` and snap filesystems, because they live in memory or are read-only images that always show 100%.
+
+## Thresholds
+
+The default thresholds are 80% for CPU, 80% for memory and 90% for disk. Options 2, 3 and 4 ask for a new value, and pressing Enter keeps the current one. Only whole numbers from 1 to 100 are accepted, so text, decimals, negative numbers and `0` are rejected. A value such as `08` is read as 8, not as an octal number.
+
+A warning is shown when usage is above the threshold. The CPU check also warns about each process above it. Reports use the current thresholds.
+
+## Terminating processes
+
+`terminate_process` refuses to stop:
+
+- PID 1, the script itself and the shell that started it
+- processes owned by system accounts, with a user ID below 1000, such as `root`
+- processes of another user, unless the script is run as root
+
+It then shows the process and asks the user to type `yes`. It sends `SIGTERM`, which lets the process close properly, and waits up to 3 seconds. If the process is still running, it says so instead of reporting success.
+
+## Reports
+
+The user picks a folder, and pressing Enter uses `system_health/reports`. A `~` at the start is turned into the home folder. If the folder does not exist, the script asks before creating it. The file is named with the date and time, such as `health_report_20261126_045733.txt`.
+
+The report contains the date and time it was made, the thresholds, and the output of options 1 to 4.
+
+## Activity log
+
+The log is `system_health/activity.log`, next to the script, wherever it is run from. Each line has a date, time and level:
+
+```
+2026-11-26 05:00:14 [INFO] Session started by wsl
+2026-11-26 05:00:18 [INFO] Memory usage checked: 24.4%
+2026-11-26 05:00:20 [INFO] Session ended with Ctrl+C
+```
+
+| Level | Used for |
+|---|---|
+| `INFO` | Checks, searches, thresholds, viewing and the start and end of a session |
+| `WARNING` | Usage above a threshold, and refused terminations |
+| `ACTION` | Terminated processes, saved reports and clearing the log |
+| `ERROR` | Missing commands, files or processes, and failed saves |
+
+Clearing the log leaves one entry that says it was cleared. The log and the reports are in `.gitignore`.
+
+## Error handling
+
+| Problem | What happens |
+|---|---|
+| Invalid menu choice or threshold | Message, then the question is asked again |
+| Input ends (Ctrl+D) at any question | The script exits cleanly |
+| Ctrl+C | The session end is logged, and the script exits |
+| A command such as `free`, `ps`, `df` or `uptime` is missing | That section shows an error, and the other options still work |
+| Invalid PID, or a PID that is not running | Message, and nothing is terminated |
+| Protected process, or no permission | Refused with a message, and logged |
+| A process that ignores `SIGTERM` | Reported as still running |
+| Report folder cannot be created, is not writable, or is a file | Message, and no report is saved |
+| Log file cannot be written | One warning, then the script carries on without logging |
+| Not running on Linux | Message, and the script exits |
+
+## Testing the script
+
+These tests ran on Ubuntu 22.04 in WSL, and all 47 checks passed.
+
+| Test | Result |
+|---|---|
+| Options 1 to 4 | Correct information, and the memory percentage matches `free` |
+| Thresholds `abc`, `0`, `101`, `50.5`, `-5`, `1000` | Rejected; `08` is accepted as 8 |
+| A busy process (`yes`) with a low CPU threshold | A warning for that process |
+| Memory and disk thresholds of 1 and 100 | Warnings at 1, and none at 100 |
+| Search by part of a name, any capitals, PID, unknown name, `[` and a PID that is too long | Correct matches or a message |
+| Terminate: cancel, invalid PID, PID 1, a `root` process, a PID that is not running | Nothing is terminated |
+| Terminate the user's own process | It stops, and the action is logged |
+| A process that ignores `SIGTERM` | Reported as still running |
+| Report in the default folder, a `~` folder, `/root`, a file, and a folder the user chose not to create | Saved, or an error with no report |
+| View, cancel clearing, clear | Correct log contents |
+| Input ending after every option and question | Clean exit |
+| `free`, `ps`, `df` and `uptime` missing | Errors in those sections only |
+| Read-only log file | One warning |
+| Run from another folder | The log stays next to the script |
+| Ctrl+C at the menu | Logged, and exit code 130 |
+| Run in Git Bash | Stops with the Linux message |
+
+Stopping another normal user's process was not tested, because the test system had only one normal user.

@@ -10,5 +10,9 @@ document_analyzer/document_analyzer
 # Reports made by the document analyzer
 document_analyzer/*_report.txt
 
+# Log and reports made by the system health script
+system_health/activity.log
+system_health/reports/
+
 # Editor settings
 .vscode/
