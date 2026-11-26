@@ -1,13 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include "helpers.h"
 #include "transactions.h"
 #include "processing.h"
-#include "filtering.h"
-#include "search_sort.h"
-#include "report.h"
-#include "files.h"
 
 // Loads the transactions, then shows the menu until the user exits
 int main(void)
